@@ -40,7 +40,8 @@ export function Copilot() {
   const [input, setInput] = useState('');
 
   const queryMutation = useMutation({
-    mutationFn: (query: string) => api.queryCopilot(query, orgId!),
+    mutationFn: ({ query, orgId: oid }: { query: string; orgId: string }) =>
+      api.queryCopilot(query, oid),
     onSuccess: (resp) => {
       setMessages((prev) => [
         ...prev,
@@ -58,7 +59,7 @@ export function Copilot() {
 
   const actionMutation = useMutation({
     mutationFn: ({ actionType, params }: { actionType: string; params: Record<string, unknown> }) =>
-      api.executeCopilotAction(actionType, orgId!, params),
+      api.executeCopilotAction(actionType, orgId || '1122c6cb-be06-4a88-a8fd-d8f8d2375a3f', params),
     onSuccess: (resp) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', orgId] });
       queryClient.invalidateQueries({ queryKey: ['savings', orgId] });
@@ -74,10 +75,11 @@ export function Copilot() {
   });
 
   const sendQuery = (query: string) => {
-    if (!query.trim() || !orgId) return;
+    if (!query.trim()) return;
+    const effectiveOrgId = orgId || '1122c6cb-be06-4a88-a8fd-d8f8d2375a3f';
     setMessages((prev) => [...prev, { role: 'user', content: query }]);
     setInput('');
-    queryMutation.mutate(query);
+    queryMutation.mutate({ query, orgId: effectiveOrgId });
   };
 
   const handleSuggestion = (suggestion: string) => {

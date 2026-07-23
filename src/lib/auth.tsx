@@ -3,6 +3,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
+const DEFAULT_ORG_ID = '1122c6cb-be06-4a88-a8fd-d8f8d2375a3f';
+
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
@@ -29,16 +31,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setUser(data.session?.user ?? null);
       setLoading(false);
+      resolveOrgId(data.session);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       setLoading(false);
+      resolveOrgId(sess);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  async function resolveOrgId(sess: Session | null) {
+    if (localStorage.getItem('acig_org_id')) {
+      setOrgId(localStorage.getItem('acig_org_id'));
+      return;
+    }
+    try {
+      const { data } = await supabase.from('organizations').select('id').limit(1);
+      if (data && data.length > 0) {
+        handleSetOrgId(data[0].id);
+      } else {
+        handleSetOrgId(DEFAULT_ORG_ID);
+      }
+    } catch {
+      handleSetOrgId(DEFAULT_ORG_ID);
+    }
+  }
 
   const handleSetOrgId = (id: string) => {
     localStorage.setItem('acig_org_id', id);

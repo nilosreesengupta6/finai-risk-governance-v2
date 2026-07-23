@@ -40,7 +40,6 @@ export function Dashboard() {
   const { data: budgets } = useQuery({
     queryKey: ['budgets', orgId],
     queryFn: () => api.getBudgets(orgId || undefined),
-    enabled: !!orgId,
   });
 
   if (kpisLoading) return <LoadingSpinner />;
