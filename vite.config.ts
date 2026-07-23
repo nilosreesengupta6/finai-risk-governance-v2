@@ -13,4 +13,12 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react', 'pdfjs-dist'],
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 });

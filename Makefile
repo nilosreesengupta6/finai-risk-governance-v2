@@ -1,4 +1,4 @@
-.PHONY: build dev test lint clean up down
+.PHONY: build dev test lint clean up down observability
 
 build:
 	docker compose build
@@ -17,6 +17,9 @@ test:
 
 lint:
 	docker compose run --rm api python -m ruff check app || ruff check app
+
+observability:
+	docker compose up prometheus grafana loki jaeger
 
 clean:
 	docker compose down -v
