@@ -101,6 +101,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ query, org_id: orgId }),
     }),
+  executeCopilotAction: (actionType: string, orgId: string, params: Record<string, unknown>) =>
+    apiFetch<any>('/copilot/action', {
+      method: 'POST',
+      body: JSON.stringify({ action_type: actionType, org_id: orgId, params }),
+    }),
 
   // Optimization
   getRecommendations: (orgId?: string, status?: string) => {
@@ -118,4 +123,30 @@ export const api = {
     apiFetch<any>(`/optimization/savings${orgId ? `?org_id=${orgId}` : ''}`),
   generateRecommendations: (orgId: string) =>
     apiFetch<any>(`/optimization/generate?org_id=${orgId}`, { method: 'POST' }),
+  simulateScenario: (orgId: string, fromModel: string, toModel: string) =>
+    apiFetch<any>(`/optimization/scenario?org_id=${orgId}&from_model=${fromModel}&to_model=${toModel}`, {
+      method: 'POST',
+    }),
+
+  // Forecasting
+  generateForecast: (orgId: string, periodType: string = 'monthly') =>
+    apiFetch<any>('/forecasting/generate', {
+      method: 'POST',
+      body: JSON.stringify({ org_id: orgId, period_type: periodType }),
+    }),
+  getForecasts: (orgId?: string, periodType?: string) => {
+    const qs = new URLSearchParams();
+    if (orgId) qs.set('org_id', orgId);
+    if (periodType) qs.set('period_type', periodType);
+    return apiFetch<any[]>(`/forecasting/forecasts?${qs}`);
+  },
+  runScenarioAnalysis: (orgId: string, fromModel: string, toModel: string) =>
+    apiFetch<any>('/forecasting/scenario', {
+      method: 'POST',
+      body: JSON.stringify({ org_id: orgId, from_model: fromModel, to_model: toModel }),
+    }),
+  getBudgets: (orgId?: string) =>
+    apiFetch<any[]>(`/forecasting/budgets${orgId ? `?org_id=${orgId}` : ''}`),
+  refreshBudgets: (orgId: string) =>
+    apiFetch<any>(`/forecasting/budgets/refresh?org_id=${orgId}`, { method: 'POST' }),
 };

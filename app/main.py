@@ -28,6 +28,7 @@ from app.governance.router import router as governance_router
 from app.audit.router import router as audit_router
 from app.copilot.router import router as copilot_router
 from app.optimization.router import router as optimization_router
+from app.forecasting.router import router as forecasting_router
 
 configure_logging(settings.debug)
 logger = get_logger(__name__)
@@ -63,6 +64,7 @@ app.include_router(governance_router, prefix=settings.api_prefix)
 app.include_router(audit_router, prefix=settings.api_prefix)
 app.include_router(copilot_router, prefix=settings.api_prefix)
 app.include_router(optimization_router, prefix=settings.api_prefix)
+app.include_router(forecasting_router, prefix=settings.api_prefix)
 
 
 @app.get("/")

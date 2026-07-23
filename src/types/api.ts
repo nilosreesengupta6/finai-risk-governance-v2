@@ -187,6 +187,11 @@ export interface OptimizationRecommendation {
 
 export interface KPIs {
   total_cost: number;
+  today_cost: number;
+  month_cost: number;
+  forecast_monthly: number;
+  budget_utilization: number;
+  budget_limit: number;
   total_requests: number;
   successful_requests: number;
   blocked_requests: number;
@@ -236,6 +241,61 @@ export interface CopilotResponse {
   data: Record<string, unknown>;
   suggested_actions: string[];
   sources: string[];
+  actionable: boolean;
+}
+
+export interface Forecast {
+  id?: string;
+  org_id: string;
+  period_type: string;
+  target_date: string;
+  best_case: number;
+  expected_case: number;
+  worst_case: number;
+  confidence_interval_low: number;
+  confidence_interval_high: number;
+  confidence_score: number;
+  model_metadata: {
+    algorithm: string;
+    training_points: number;
+    slope: number;
+    intercept: number;
+    r_squared: number;
+    avg_daily_spend: number;
+    std_dev: number;
+    trend: string;
+  };
+}
+
+export interface ScenarioAnalysis {
+  from_model: string;
+  to_model: string;
+  from_pricing: { input_per_1k: number; output_per_1k: number };
+  to_pricing: { input_per_1k: number; output_per_1k: number };
+  total_requests: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  actual_spend: number;
+  simulated_spend: number;
+  total_savings: number;
+  savings_percentage: number;
+  projected_monthly_savings: number;
+  quality_note: string;
+}
+
+export interface Budget {
+  id: string;
+  org_id: string;
+  project_id: string | null;
+  project_name: string | null;
+  budget_limit: number;
+  actual_spend: number;
+  forecast_spend: number;
+  utilization_pct: number;
+  period: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ChatResponse {

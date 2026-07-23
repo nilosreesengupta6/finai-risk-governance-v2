@@ -17,14 +17,19 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 @router.get("/kpis")
 async def get_executive_kpis(org_id: UUID | None = None):
-    """Executive dashboard KPIs: total cost, requests, avg latency, cache hit rate, etc."""
+    """Executive dashboard KPIs: total cost, today's spend, monthly spend,
+    forecast, requests, latency, cache hit rate, and budget utilization."""
     filters = {"org_id": str(org_id)} if org_id else None
     requests = await supabase.select(
         "ai_requests",
-        columns="total_cost,total_tokens,latency_ms,cache_hit,status,prompt_tokens,completion_tokens",
+        columns="total_cost,total_tokens,latency_ms,cache_hit,status,prompt_tokens,completion_tokens,created_at",
         filters=filters,
         limit=10000,
     )
+
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    this_month = now.strftime("%Y-%m")
 
     total_cost = sum(r["total_cost"] for r in requests)
     total_requests = len(requests)
@@ -36,8 +41,34 @@ async def get_executive_kpis(org_id: UUID | None = None):
     total_tokens = sum(r["total_tokens"] for r in requests)
     cache_hit_rate = (len(cached) / total_requests * 100) if total_requests else 0
 
+    # Today's spend
+    today_cost = round(sum(r["total_cost"] for r in requests if r["created_at"][:10] == today), 2)
+
+    # Monthly spend
+    month_cost = round(sum(r["total_cost"] for r in requests if r["created_at"][:7] == this_month), 2)
+
+    # Simple forecast: month-to-date spend projected to month-end
+    days_elapsed = max(now.day, 1)
+    forecast_monthly = round(month_cost * (30 / days_elapsed), 2) if days_elapsed < 30 else month_cost
+
+    # Budget utilization
+    budget_utilization = 0
+    budget_limit = 0
+    if org_id:
+        budgets = await supabase.select("budgets", filters={"org_id": str(org_id)}, limit=50)
+        if budgets:
+            total_budget = sum(b["budget_limit"] for b in budgets)
+            total_actual = sum(b["actual_spend"] for b in budgets)
+            budget_limit = total_budget
+            budget_utilization = round((total_actual / total_budget * 100), 1) if total_budget > 0 else 0
+
     return {
         "total_cost": round(total_cost, 2),
+        "today_cost": today_cost,
+        "month_cost": month_cost,
+        "forecast_monthly": forecast_monthly,
+        "budget_utilization": budget_utilization,
+        "budget_limit": round(budget_limit, 2),
         "total_requests": total_requests,
         "successful_requests": len(successful),
         "blocked_requests": len(blocked),

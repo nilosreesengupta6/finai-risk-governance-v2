@@ -1,10 +1,12 @@
-// Executive Dashboard: KPIs, cost trend chart, cost by model, token usage.
+// Executive Dashboard: KPIs, cost trend chart, cost by model, token usage, forecast.
 import { useQuery } from '@tanstack/react-query';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, Legend,
+  BarChart, Bar, PieChart, Pie, Cell,
 } from 'recharts';
-import { DollarSign, Zap, Clock, Database, TrendingDown, ShieldCheck } from 'lucide-react';
+import {
+  DollarSign, Calendar, TrendingUp, Wallet, Zap, Clock, Database, ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Card, KPICard, PageHeader, LoadingSpinner, formatCurrency, formatNumber } from '@/components/ui';
@@ -35,6 +37,12 @@ export function Dashboard() {
     queryFn: () => api.getCostByProvider(orgId || undefined),
   });
 
+  const { data: budgets } = useQuery({
+    queryKey: ['budgets', orgId],
+    queryFn: () => api.getBudgets(orgId || undefined),
+    enabled: !!orgId,
+  });
+
   if (kpisLoading) return <LoadingSpinner />;
 
   return (
@@ -44,14 +52,52 @@ export function Dashboard() {
         subtitle="Real-time AI cost intelligence and governance KPIs"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+      {/* Executive KPI Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <KPICard label="Total Spend" value={formatCurrency(kpis?.total_cost || 0)} sub="All-time" icon={<DollarSign className="w-5 h-5" />} accent />
+        <KPICard label="Today's Spend" value={formatCurrency(kpis?.today_cost || 0)} sub="Today" icon={<Calendar className="w-5 h-5" />} />
+        <KPICard label="This Month" value={formatCurrency(kpis?.month_cost || 0)} sub={new Date().toLocaleString('en-US', { month: 'long' })} icon={<Calendar className="w-5 h-5" />} />
+        <KPICard label="Monthly Forecast" value={formatCurrency(kpis?.forecast_monthly || 0)} sub="Projected" icon={<TrendingUp className="w-5 h-5" />} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KPICard label="Total Requests" value={formatNumber(kpis?.total_requests || 0)} sub="All-time" icon={<Zap className="w-5 h-5" />} />
         <KPICard label="Avg Latency" value={`${kpis?.avg_latency_ms || 0}ms`} sub="Per request" icon={<Clock className="w-5 h-5" />} />
         <KPICard label="Cache Hit Rate" value={`${kpis?.cache_hit_rate || 0}%`} sub="Semantic cache" icon={<Database className="w-5 h-5" />} />
-        <KPICard label="Total Tokens" value={formatNumber(kpis?.total_tokens || 0)} sub="Prompt + completion" icon={<TrendingDown className="w-5 h-5" />} />
-        <KPICard label="Blocked Requests" value={kpis?.blocked_requests || 0} sub="Policy enforcement" icon={<ShieldCheck className="w-5 h-5" />} />
+        <KPICard
+          label="Budget Utilization"
+          value={`${kpis?.budget_utilization || 0}%`}
+          sub={kpis?.budget_limit ? `of ${formatCurrency(kpis.budget_limit)}` : 'No budget set'}
+          icon={<Wallet className="w-5 h-5" />}
+        />
       </div>
+
+      {/* Budget Health Cards */}
+      {budgets && budgets.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {budgets.map((b: any) => {
+            const pct = b.utilization_pct;
+            const statusColor = b.status === 'exceeded' ? 'text-red-400' : b.status === 'critical' ? 'text-orange-400' : b.status === 'warning' ? 'text-yellow-400' : 'text-green-400';
+            const barColor = b.status === 'exceeded' ? 'bg-red-500' : b.status === 'critical' ? 'bg-orange-500' : b.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500';
+            return (
+              <Card key={b.id} hover className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-[#E6EDF3]">{b.project_name || 'Org-wide'}</span>
+                  <span className={`text-xs font-medium ${statusColor} capitalize`}>{b.status.replace('_', ' ')}</span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-lg font-semibold text-[#E6EDF3]">{formatCurrency(b.actual_spend)}</span>
+                  <span className="text-xs text-[#6E7681]">/ {formatCurrency(b.budget_limit)}</span>
+                </div>
+                <div className="h-2 bg-[#0D1117] rounded-full overflow-hidden">
+                  <div className={`h-full ${barColor} rounded-full transition-all duration-500`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                <p className="text-xs text-[#6E7681] mt-1.5">{pct.toFixed(0)}% used · Forecast: {formatCurrency(b.forecast_spend)}</p>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <Card className="p-5">
